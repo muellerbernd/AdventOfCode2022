@@ -22,7 +22,7 @@ fn main() {
         sums.push(array.sum());
     }
     let array = Array::from(sums.clone());
-    let max = array.max();
+    let max = array.max().unwrap();
     println!("part 1: {:?}", max);
     // part 2
     sums.sort_by(|a, b| b.cmp(a));
