@@ -49,25 +49,18 @@ fn calc_tail_move(head: &Position, tail: &Position) -> Position {
         x: tail.x,
         y: tail.y,
     };
-    let diff_x = head.x - tail.x;
-    let diff_y = head.y - tail.y;
-    let (delta_x, delta_y) = if (i32::abs(diff_y) == 2) && (i32::abs(diff_x) == 2) {
-        (diff_x / 2, diff_y / 2)
-    } else if i32::abs(diff_x) > 1 {
-        (diff_x / 2, diff_y)
-    } else if i32::abs(diff_y) > 1 {
-        (diff_x, diff_y / 2)
-    } else {
-        (0, 0)
-    };
-    new_tail_pos.x += delta_x;
-    new_tail_pos.y += delta_y;
+    let diff_x: i32 = head.x - tail.x;
+    let diff_y: i32 = head.y - tail.y;
+    if i32::abs(diff_x) > 1 || i32::abs(diff_y) > 1 {
+        new_tail_pos.x += i32::signum(diff_x);
+        new_tail_pos.y += i32::signum(diff_y);
+    }
     new_tail_pos
 }
 
 fn main() {
-    let file_path = "../inputs/aoc_09.txt";
-    // let file_path = "test_input.txt";
+    // let file_path = "../inputs/aoc_09.txt";
+    let file_path = "test_input.txt";
 
     let raw_input: String =
         read_to_string(file_path).expect("Should have been able to read the file");
@@ -122,10 +115,11 @@ fn main() {
             grid[h_y][h_x] = 'T';
             // let (h_x, h_y) = get_2d_index(&curr_head_pos, &grid, min_x, max_x, min_y, max_y);
             // grid[h_y][h_x] = 'H';
+            // println!("");
             // print_2d(&grid);
         }
     }
-    // print_2d(&grid);
+    print_2d(&grid);
     let tail_positions: usize = grid
         .iter()
         .map(|l| l.iter().filter(|c| c == &&'T').count())
