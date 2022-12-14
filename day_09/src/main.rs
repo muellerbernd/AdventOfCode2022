@@ -1,4 +1,5 @@
 use std::fs::read_to_string;
+use std::iter::zip;
 
 #[derive(Debug, Clone)]
 struct Position {
@@ -58,12 +59,7 @@ fn calc_tail_move(head: &Position, tail: &Position) -> Position {
     new_tail_pos
 }
 
-fn main() {
-    // let file_path = "../inputs/aoc_09.txt";
-    let file_path = "test_input.txt";
-
-    let raw_input: String =
-        read_to_string(file_path).expect("Should have been able to read the file");
+fn task1(raw_input: &String) {
     let mut grid: Vec<Vec<char>> = vec![vec!['s']];
     let mut curr_head_pos = Position { x: 0, y: 0 };
     let mut curr_tail_pos = Position { x: 0, y: 0 };
@@ -125,4 +121,77 @@ fn main() {
         .map(|l| l.iter().filter(|c| c == &&'T').count())
         .sum();
     println!("task1: {}", tail_positions);
+}
+
+fn task2(raw_input: &String) {
+    let mut grid: Vec<Vec<char>> = vec![vec!['s']];
+    let rope_len = 10;
+    // let mut curr_head_pos = Position { x: 0, y: 0 };
+    // let mut curr_tail_pos = Position { x: 0, y: 0 };
+    let mut rope: Vec<Position> = vec![Position { x: 0, y: 0 }; rope_len];
+    let mut tail_positions: Vec<Position> = Vec::new();
+    let mut min_x = 0;
+    let mut max_x = 0;
+    let mut min_y = 0;
+    let mut max_y = 0;
+    for l in raw_input.lines() {
+        let dir: String = l.split(" ").collect::<Vec<&str>>()[0].to_string();
+        let count: i32 = l.split(" ").collect::<Vec<&str>>()[1]
+            .to_string()
+            .parse::<i32>()
+            .unwrap();
+        for _ in 0..count {
+            match dir.as_str() {
+                "R" => {
+                    rope[0].x += 1;
+                    if rope[0].x > max_x {
+                        max_x = rope[0].x;
+                        add_dim_right(&mut grid);
+                    }
+                }
+                "L" => {
+                    rope[0].x -= 1;
+                    if rope[0].x < min_x {
+                        min_x = rope[0].x;
+                        add_dim_left(&mut grid);
+                    }
+                }
+                "U" => {
+                    rope[0].y += 1;
+                    if rope[0].y > max_y {
+                        max_y = rope[0].y;
+                        add_dim_up(&mut grid);
+                    }
+                }
+                "D" => {
+                    rope[0].y -= 1;
+                    if rope[0].y < min_y {
+                        min_y = rope[0].y;
+                        add_dim_down(&mut grid);
+                    }
+                }
+                _ => println!("unknown direction"),
+            }
+            for (head_idx, tail_idx) in zip((0..9), (1..=9)) {
+                rope[tail_idx] = calc_tail_move(&rope[head_idx], &rope[tail_idx]);
+            }
+            let (h_x, h_y) = get_2d_index(&rope.last().unwrap(), &grid, min_x, max_x, min_y, max_y);
+            grid[h_y][h_x] = 'T';
+        }
+    }
+    print_2d(&grid);
+    let tail_positions: usize = grid
+        .iter()
+        .map(|l| l.iter().filter(|c| c == &&'T').count())
+        .sum();
+    println!("task2: {}", tail_positions);
+}
+fn main() {
+    let file_path = "../inputs/aoc_09.txt";
+    // let file_path = "test_input.txt";
+
+    let raw_input: String =
+        read_to_string(file_path).expect("Should have been able to read the file");
+    task1(&raw_input);
+    task2(&raw_input);
 }
