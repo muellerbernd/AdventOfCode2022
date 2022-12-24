@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::fs::read_to_string;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct MonkeyNotes {
-    starting_items: Vec<i16>,
+    items: Vec<i16>,
     operation: String,
     test_divisor: i16,
     test_true: String,
@@ -38,7 +38,7 @@ fn parse_input(raw_input: String) -> HashMap<String, MonkeyNotes> {
             .join(" ")
             .to_string();
         let monkey_note = MonkeyNotes {
-            starting_items,
+            items: starting_items,
             operation,
             test_divisor,
             test_true,
@@ -49,6 +49,45 @@ fn parse_input(raw_input: String) -> HashMap<String, MonkeyNotes> {
     return monkey_map;
 }
 
+fn task01(mut monkey_map: HashMap<String, MonkeyNotes>) {
+    let mut monkey_activity: HashMap<String, i16> = HashMap::new();
+    for m in monkey_map.keys() {
+        monkey_activity.insert(m.to_string(), 0);
+    }
+    println!("{:?}", monkey_activity);
+    for r in 0..20 {
+        println!("round {}", r + 1);
+        for (k, v) in &monkey_map {
+            println!("{} {:?}", k, v);
+            *monkey_activity.get_mut(k).unwrap() += (v.items.len() > 0) as i16;
+            let mut op: String =
+                v.operation.split_whitespace().collect::<Vec<&str>>()[1].to_string();
+            let mut worry_level_delta: i16 = 0;
+            if let Ok(result) =
+                v.operation.split_whitespace().collect::<Vec<&str>>()[2].parse::<i16>()
+            {
+                worry_level_delta = result;
+            } else {
+                op = "sqr".to_string();
+            };
+            println!("operation {}", op);
+            for (index, worry_level) in v.items.iter().enumerate() {
+                let new_worry_level = match op.as_str() {
+                    "sqr" => worry_level * worry_level,
+                    "*" => worry_level * worry_level_delta,
+                    "+" => worry_level + worry_level_delta,
+                    "-" => worry_level - worry_level_delta,
+                    "/" => worry_level / worry_level_delta,
+                    _ => -1,
+                };
+                assert!(new_worry_level != -1);
+                println!("worry_level {}", new_worry_level);
+            }
+        }
+        break;
+    }
+}
+
 fn main() {
     let file_path = "../inputs/aoc_11.txt";
     // let file_path = "test_input.txt";
@@ -56,7 +95,6 @@ fn main() {
     let raw_input: String =
         read_to_string(file_path).expect("Should have been able to read the file");
     let monkey_map: HashMap<String, MonkeyNotes> = parse_input(raw_input);
-    for (k, v) in monkey_map {
-        println!("{} {:?}", k, v);
-    }
+    // After each monkey inspects an item but before it tests your worry level, your relief that the monkey's inspection didn't damage the item causes your worry level to be divided by three and rounded down to the nearest integer.
+    task01(monkey_map.clone());
 }
