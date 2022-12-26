@@ -3,6 +3,7 @@ use std::fs::{read_to_string, File};
 use std::io::Write;
 // Create a GraphMap with directed edges, and add one edge to it
 use petgraph::algo::dijkstra;
+use petgraph::algo::astar;
 use petgraph::dot::{Config, Dot};
 use petgraph::graphmap::UnGraphMap;
 
@@ -92,8 +93,8 @@ fn setup_graph(height_map: &Vec<Vec<i32>>) -> UnGraphMap<(usize, usize), i32> {
 }
 
 fn main() {
-    let file_path = "../inputs/aoc_12.txt";
-    // let file_path = "test_input.txt";
+    // let file_path = "../inputs/aoc_12.txt";
+    let file_path = "test_input.txt";
 
     let raw_input: String =
         read_to_string(file_path).expect("Should have been able to read the file");
@@ -145,5 +146,7 @@ fn main() {
         // dijkstra(&g, start_pos.into(), Some(goal_pos.into()), |_| 1);
     // println!("{:?}", node_map.keys().filter(|x| x.0 == 1 as usize).collect::<Vec<&(usize,usize)>>());
     println!("{:?}", node_map);
+    let path = astar(&g, start_pos, |finish| finish == goal_pos, |e| 1, |_| 0);
+    println!("path {:?}", path);
     println!("{:?}", node_map.get(&start_pos).unwrap());
 }
