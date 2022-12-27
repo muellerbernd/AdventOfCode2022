@@ -1,152 +1,157 @@
-use std::collections::HashMap;
-use std::fs::{read_to_string, File};
-use std::io::Write;
-// Create a GraphMap with directed edges, and add one edge to it
-use petgraph::algo::dijkstra;
-use petgraph::algo::astar;
-use petgraph::dot::{Config, Dot};
-use petgraph::graphmap::UnGraphMap;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+use std::collections::HashSet;
+use std::fs::read_to_string;
 
-fn print_2d(v: &Vec<Vec<i32>>) {
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Ord, PartialOrd)]
+pub struct Coord {
+    x: usize,
+    y: usize,
+}
+
+impl Coord {
+    fn neighbours(&self, rows: usize, cols: usize) -> Vec<Self> {
+        let mut result = Vec::new();
+
+        // up
+        if self.y > 0 {
+            result.push(Self {
+                x: self.x,
+                y: self.y - 1,
+            });
+        }
+        // down
+        if self.y < rows - 1 {
+            result.push(Self {
+                x: self.x,
+                y: self.y + 1,
+            });
+        }
+        // left
+        if self.x > 0 {
+            result.push(Self {
+                x: self.x - 1,
+                y: self.y,
+            });
+        }
+        // right
+        if self.x < cols - 1 {
+            result.push(Self {
+                x: self.x + 1,
+                y: self.y,
+            });
+        }
+
+        result
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+struct Node {
+    cost: u32,
+    coord: Coord,
+}
+
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.cost.cmp(&self.cost)
+    }
+}
+
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn print_2d<T>(v: &Vec<Vec<T>>)
+where
+    T: std::fmt::Debug,
+{
     for l in v {
         println!("{:?}", l);
     }
 }
 
-fn setup_graph(height_map: &Vec<Vec<i32>>) -> UnGraphMap<(usize, usize), i32> {
-    // let mut graph: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
-    let mut g = UnGraphMap::new();
-    let y_len = height_map.len();
-    let x_len = height_map[0].len();
-    // let mut c: i32;
-    // let mut p: i32;
-    let mut c: (usize, usize);
-    let mut p: (usize, usize);
-    for y_index in 0..y_len {
-        for x_index in 0..x_len {
-            let curr_val = height_map[y_index][x_index];
-            let val_l = if x_index >= 1 {
-                Some(height_map[y_index][x_index - 1])
-            } else {
-                None
+fn parse(input: String) -> (Coord, Coord, Vec<Vec<u8>>, usize, usize) {
+    let rows = input.lines().count();
+    let cols = input.lines().next().unwrap().len();
+    let mut map = vec![vec![0; cols]; rows];
+    let mut start = Coord { x: 0, y: 0 };
+    let mut goal = Coord { x: 0, y: 0 };
+
+    for (row, line) in input.lines().enumerate() {
+        for (col, c) in line.chars().enumerate() {
+            let letter = match c {
+                'S' => {
+                    start.x = col;
+                    start.y = row;
+                    'a'
+                }
+                'E' => {
+                    goal.x = col;
+                    goal.y = row;
+                    'z'
+                }
+                'a'..='z' => c,
+                _ => panic!("Invalid input"),
             };
-            let val_r = if x_index < x_len - 1 {
-                Some(height_map[y_index][x_index + 1])
-            } else {
-                None
-            };
-            let val_u = if y_index >= 1 {
-                Some(height_map[y_index - 1][x_index])
-            } else {
-                None
-            };
-            let val_d = if y_index < y_len - 1 {
-                Some(height_map[y_index + 1][x_index])
-            } else {
-                None
-            };
-            // p = format!("{}{}", x_index.clone(), y_index.clone())
-            //     .parse()
-            //     .unwrap();
-            p = (x_index, y_index);
-            if val_r.is_some() && (val_r.unwrap() - curr_val).abs() <= 1 {
-                // graph
-                //     .entry((x_index, y_index))
-                //     .and_modify(|v| v.push((x_index + 1, y_index)))
-                //     .or_insert(vec![(x_index + 1, y_index)]);
-                c = (x_index + 1, y_index);
-                g.add_edge(p, c, -1);
-            }
-            if val_l.is_some() && (val_l.unwrap() - curr_val).abs() <= 1 {
-                // graph
-                //     .entry((x_index, y_index))
-                //     .and_modify(|v| v.push((x_index - 1, y_index)))
-                //     .or_insert(vec![(x_index - 1, y_index)]);
-                // c = format!("{}{}", x_index - 1, y_index).parse().unwrap();
-                c = (x_index - 1, y_index);
-                g.add_edge(p, c, -1);
-            }
-            if val_u.is_some() && (val_u.unwrap() - curr_val).abs() <= 1 {
-                // graph
-                //     .entry((x_index, y_index))
-                //     .and_modify(|v| v.push((x_index, y_index - 1)))
-                //     .or_insert(vec![(x_index, y_index - 1)]);
-                // c = format!("{}{}", x_index, y_index - 1).parse().unwrap();
-                c = (x_index, y_index - 1);
-                g.add_edge(p, c, -1);
-            }
-            if val_d.is_some() && (val_d.unwrap() - curr_val).abs() <= 1 {
-                // graph
-                //     .entry((x_index, y_index))
-                //     .and_modify(|v| v.push((x_index, y_index + 1)))
-                //     .or_insert(vec![(x_index, y_index + 1)]);
-                // c = format!("{}{}", x_index, y_index + 1).parse().unwrap();
-                c = (x_index, y_index + 1);
-                g.add_edge(p, c, -1);
+
+            let val = letter as u8 - b'a';
+            map[row][col] = val;
+        }
+    }
+
+    (start, goal, map, rows, cols)
+}
+
+pub fn part_1(start: Coord, goal: Coord, map: &Vec<Vec<u8>>, rows: usize, cols: usize) -> u32 {
+    let mut pq = BinaryHeap::new();
+    let mut visited = HashSet::new();
+
+    pq.push(Node {
+        cost: 0,
+        coord: start.clone(),
+    });
+    visited.insert(start);
+
+    while let Some(Node { coord, cost }) = pq.pop() {
+        if coord == goal {
+            return cost;
+        }
+
+        let curr_height = map[coord.y][coord.x];
+        let neighbours = coord.neighbours(rows, cols);
+        let candidates: Vec<_> = neighbours
+            .iter()
+            .filter(|coord| {
+                let height = map[coord.y][coord.x];
+                height <= curr_height || height == curr_height + 1
+            })
+            .collect();
+
+        for candidate in candidates {
+            if visited.insert(*candidate) {
+                pq.push(Node {
+                    cost: cost + 1,
+                    coord: *candidate,
+                })
             }
         }
     }
-    // println!("{:?}", graph);
-    // println!("{:?}", graph.get(&(4, 2)));
-    // println!("{:?}", graph.get(&(1, 1)));
-    g
+
+    panic!("No path found");
 }
 
 fn main() {
-    // let file_path = "../inputs/aoc_12.txt";
-    let file_path = "test_input.txt";
+    let file_path = "../inputs/aoc_12.txt";
+    // let file_path = "test_input.txt";
 
     let raw_input: String =
         read_to_string(file_path).expect("Should have been able to read the file");
-
-    // println!("{}", raw_input);
-    let mut start_pos = (0, 0);
-    let mut goal_pos = (0, 0);
-    // get start and end point from input
-    for (i, l) in raw_input.lines().enumerate() {
-        for (j, c) in l.chars().enumerate() {
-            if c == 'S' {
-                start_pos.0 = j;
-                start_pos.1 = i;
-            }
-            if c == 'E' {
-                goal_pos.0 = j;
-                goal_pos.1 = i;
-            }
-        }
-    }
-    println!("start: {:?}, goal: {:?}", start_pos, goal_pos);
-    let mod_input_lines: Vec<String> = raw_input
-        .lines()
-        .map(|l| l.replace("S", "a").replace("E", "z"))
-        .collect();
-    // println!("{:?}", mod_input_lines);
-    let height_map: Vec<Vec<i32>> = mod_input_lines
-        .iter()
-        .map(|l| l.chars().map(|c| c as i32 - 'a' as i32).collect())
-        .collect();
-    // print_2d(&height_map);
-    // get_graph(&height_map);
-    // let g: UnGraphMap<i32, i32> = setup_graph(&height_map);
-    let g: UnGraphMap<(usize, usize), i32> = setup_graph(&height_map);
-    println!("{:?}", g.neighbors(start_pos));
-    println!("{:?}", g);
-    let tree = Dot::with_config(&g, &[Config::EdgeNoLabel]);
-    println!("{:?}", tree);
-    let temp_file = "graph.gv";
-    // Open a file in write-only (ignoring errors).
-    // This creates the file if it does not exist (and empty the file if it exists).
-    let mut file = File::create(temp_file).unwrap();
-    // Write a &str in the file (ignoring the result).
-    writeln!(&mut file, "{:?}", tree).unwrap();
-
-    // Find the shortest path from stast to goal using `1` as the cost for every edge.
-    let node_map: HashMap<(usize, usize), i32> =
-        dijkstra(&g, goal_pos.into(), Some(start_pos.into()), |_| 1);
-        // dijkstra(&g, start_pos.into(), Some(goal_pos.into()), |_| 1);
-    // println!("{:?}", node_map.keys().filter(|x| x.0 == 1 as usize).collect::<Vec<&(usize,usize)>>());
-    println!("{:?}", node_map);
-    let path = astar(&g, start_pos, |finish| finish == goal_pos, |e| 1, |_| 0);
-    println!("path {:?}", path);
-    println!("{:?}", node_map.get(&start_pos).unwrap());
+    let (start, goal, map, rows, cols) = parse(raw_input);
+    println!("start {:?}, goal {:?}", start, goal);
+    print_2d(&map);
+    let path_cost = part_1(start, goal, &map, rows, cols);
+    println!("task01 {:?}", path_cost);
 }
