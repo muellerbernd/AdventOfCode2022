@@ -105,7 +105,7 @@ fn parse(input: String) -> (Coord, Coord, Vec<Vec<u8>>, usize, usize) {
     (start, goal, map, rows, cols)
 }
 
-pub fn part_1(start: Coord, goal: Coord, map: &Vec<Vec<u8>>, rows: usize, cols: usize) -> u32 {
+fn part_1(start: Coord, goal: Coord, map: &Vec<Vec<u8>>, rows: usize, cols: usize) -> u32 {
     let mut pq = BinaryHeap::new();
     let mut visited = HashSet::new();
 
@@ -142,6 +142,43 @@ pub fn part_1(start: Coord, goal: Coord, map: &Vec<Vec<u8>>, rows: usize, cols: 
 
     panic!("No path found");
 }
+fn part_2(start: Coord, goal: Coord, map: &Vec<Vec<u8>>, rows: usize, cols: usize) -> u32 {
+    let mut pq = BinaryHeap::new();
+    let mut visited = HashSet::new();
+
+    pq.push(Node {
+        cost: 0,
+        coord: goal.clone(),
+    });
+    visited.insert(start);
+
+    while let Some(Node { coord, cost }) = pq.pop() {
+        let curr_height = map[coord.y][coord.x];
+        if curr_height == 0 {
+            return cost;
+        }
+
+        let neighbours = coord.neighbours(rows, cols);
+        let candidates: Vec<_> = neighbours
+            .iter()
+            .filter(|coord| {
+                let height = map[coord.y][coord.x];
+                height >= curr_height || height == curr_height - 1
+            })
+            .collect();
+
+        for candidate in candidates {
+            if visited.insert(*candidate) {
+                pq.push(Node {
+                    cost: cost + 1,
+                    coord: *candidate,
+                })
+            }
+        }
+    }
+
+    u32::MAX
+}
 
 fn main() {
     let file_path = "../inputs/aoc_12.txt";
@@ -154,4 +191,6 @@ fn main() {
     print_2d(&map);
     let path_cost = part_1(start, goal, &map, rows, cols);
     println!("task01 {:?}", path_cost);
+    let path_cost = part_2(start, goal, &map, rows, cols);
+    println!("task02 {:?}", path_cost);
 }
